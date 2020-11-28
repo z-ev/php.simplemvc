@@ -9,7 +9,7 @@
     <div class="row">
         <div class="col-md-8">
             <h1>Здравствуйте</h1>
-            <p class="lead">Это тестовое задание для work5.ru</p>
+            <p class="lead">php simple mvc</p>
             <p><small>Пользователь: user1 пароль:123<br>Пароль одинаковый для всех пользователей</small></p>
         </div>
         <div class="col-md-4">
