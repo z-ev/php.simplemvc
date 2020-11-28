@@ -1,0 +1,83 @@
+version: '3.7'
+
+services:
+  php:
+    build:
+      context: .
+      dockerfile: docker/services/php/Dockerfile
+    image: ${DOCKER_PROJECT_NAME}_php
+    container_name: ${DOCKER_PROJECT_NAME}_php
+    working_dir: ${DOCKER_PROJECT_PATCH}
+    networks:
+      - net
+    volumes:
+      - ${DOCKER_PROJECT_ROOT}:${DOCKER_PROJECT_PATCH}
+      - ./app:${DOCKER_PROJECT_PATCH}/app
+      - ./vendor:${DOCKER_PROJECT_PATCH}/vendor
+      - ./docker/services/php/conf.d/custom.ini:/usr/local/etc/php/conf.d/custom.ini
+
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/services/nginx/Dockerfile
+    image: ${DOCKER_PROJECT_NAME}_nginx
+    container_name: ${DOCKER_PROJECT_NAME}_nginx
+    working_dir: ${DOCKER_PROJECT_PATCH}
+    networks:
+      - net
+    ports:
+      - "${DOCKER_NGINX_PORTS}"
+    volumes:
+      - ${DOCKER_PROJECT_ROOT}:${DOCKER_PROJECT_PATCH}
+      - ./docker/services/nginx/conf.d/${DOCKER_NGINX_CONFIG}:/etc/nginx/conf.d/docker.conf.template
+      - ./docker/scripts/nginx.sh:/scripts/nginx.sh
+    environment:
+      - PROJECT_PATCH=${DOCKER_PROJECT_PATCH}
+      - SERVER_NAME=${DOCKER_PROJECT_DOMAIN}
+      - ROOT=${DOCKER_NGINX_ROOT}
+      - CONFIG=${DOCKER_NGINX_CONFIG}
+      - PHP_HOST=${DOCKER_PROJECT_NAME}_php
+    command: /scripts/nginx.sh
+
+  mysql:
+    build:
+      context: .
+      dockerfile: docker/services/mysql/Dockerfile
+    image: ${DOCKER_PROJECT_NAME}_mysql
+    container_name: ${DOCKER_PROJECT_NAME}_mysql
+    networks:
+      - net
+    ports:
+      - "${DOCKER_MYSQL_PORTS}"
+    volumes:
+      - ./docker/services/mysql/conf/custom.cnf:/etc/mysql/custom.cnf
+      - ./docker/services/mysql/var/backups/sql:/var/backups/sql
+      - ./docker/scripts/dbexport.sh:/scripts/dbexport.sh
+      - ./docker/services/mysql/var/backups/sql/dump.sql:/docker-entrypoint-initdb.d/dump.sql
+      # - ./docker/services/mysql/var/lib/mysql:/var/lib/mysql
+    environment:
+      - MYSQL_DATABASE=${DOCKER_PROJECT_NAME}
+      - MYSQL_ROOT_PASSWORD=${DOCKER_MYSQL_ROOT_PASSWORD}
+      - MYSQL_USER=${DOCKER_MYSQL_USER}
+      - MYSQL_PASSWORD=${DOCKER_MYSQL_PASSWORD}
+
+  phpmyadmin:
+    build:
+      context: .
+      dockerfile: docker/services/phpmyadmin/Dockerfile
+    image: ${DOCKER_PROJECT_NAME}_phpmyadmin
+    container_name: ${DOCKER_PROJECT_NAME}_phpmyadmin
+    networks:
+      - net
+    volumes:
+        - ./docker/services/php/conf.d/custom.ini:/usr/local/etc/php/conf.d/custom.ini
+    ports:
+      - "${DOCKER_PHPMYADMIN_PORTS}"
+    environment:
+      - PMA_ARBITRARY=1
+      - PMA_HOST=${DOCKER_PROJECT_NAME}_mysql
+      - PMA_ABSOLUTE_URI=${DOCKER_PHPMYADMIN_PMA_ABSOLUTE_URI}
+
+networks:
+  net:
+    driver: bridge
